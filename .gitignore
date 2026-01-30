@@ -1,0 +1,24 @@
+# Godot 4+ specific ignores
+.godot/
+
+# Godot-specific ignores
+*.import
+*.translation
+
+# Imported textures and samples
+.import/
+
+# Compiled assets
+export/
+*.exe
+*.x86_64
+*.pck
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Editor settings
+*.swp
+*.swo
+*~
