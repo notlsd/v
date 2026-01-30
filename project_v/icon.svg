@@ -1,0 +1,4 @@
+<svg height="128" width="128" xmlns="http://www.w3.org/2000/svg">
+  <rect x="2" y="2" width="124" height="124" rx="14" fill="#000000" stroke="#ac2c25" stroke-width="4"/>
+  <text x="64" y="90" font-family="monospace" font-size="80" font-weight="bold" fill="#ac2c25" text-anchor="middle">V</text>
+</svg>

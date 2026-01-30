@@ -1,0 +1,64 @@
+[gd_scene load_steps=5 format=3 uid="uid://main_scene"]
+
+[ext_resource type="PackedScene" uid="uid://player_cursor" path="res://scenes/entities/player_cursor.tscn" id="1_cursor"]
+[ext_resource type="PackedScene" uid="uid://hud_scene" path="res://scenes/ui/hud.tscn" id="2_hud"]
+[ext_resource type="Script" path="res://scripts/managers/spawn_manager.gd" id="3_spawn"]
+
+[sub_resource type="GDScript" id="GDScript_main"]
+script/source = "extends Node2D
+
+@onready var player_cursor = $PlayerCursor
+
+func _ready() -> void:
+	# 设置背景色为黑色
+	RenderingServer.set_default_clear_color(Color.BLACK)
+	
+	# 连接 PlayerCursor 到 GameManager
+	if player_cursor:
+		GameManager.connect_player_cursor(player_cursor)
+		print(\"[Main] PlayerCursor connected to GameManager\")
+	
+	print(\"[Main] Game started! Target: %s\" % GameManager.get_target_subnet_string())
+
+
+func _input(event: InputEvent) -> void:
+	# 使用 _input 而不是 _unhandled_input 确保能收到事件
+	if event is InputEventMouseButton:
+		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			print(\"[Main] Mouse click detected at: %s\" % get_global_mouse_position())
+			_handle_click(get_global_mouse_position())
+
+
+func _handle_click(mouse_pos: Vector2) -> void:
+	# 使用物理空间状态查询点击位置的 Area2D
+	var space_state = get_world_2d().direct_space_state
+	var query = PhysicsPointQueryParameters2D.new()
+	query.position = mouse_pos
+	query.collide_with_areas = true
+	query.collide_with_bodies = false
+	query.collision_mask = 0xFFFFFFFF  # 检测所有层
+	
+	var results = space_state.intersect_point(query, 32)
+	
+	print(\"[Main] Physics query found %d results\" % results.size())
+	
+	for result in results:
+		var collider = result.get(\"collider\")
+		print(\"[Main] Found collider: %s (type: %s)\" % [collider.name if collider else \"null\", collider.get_class() if collider else \"null\"])
+		if collider and collider.has_method(\"on_clicked\"):
+			print(\"[Main] Calling on_clicked on %s\" % collider.name)
+			collider.on_clicked()
+			return
+	
+	print(\"[Main] No clickable object found at mouse position\")
+"
+
+[node name="Main" type="Node2D"]
+script = SubResource("GDScript_main")
+
+[node name="PlayerCursor" parent="." instance=ExtResource("1_cursor")]
+
+[node name="SpawnManager" type="Node" parent="."]
+script = ExtResource("3_spawn")
+
+[node name="HUD" parent="." instance=ExtResource("2_hud")]
