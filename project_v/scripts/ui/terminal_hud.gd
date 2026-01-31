@@ -1,11 +1,13 @@
 ## TerminalHUD
-## 终端风格 HUD - 显示分数、连击、进度条
+## 终端风格 HUD - 显示分数、连击、掩码、进度条
 extends CanvasLayer
 
 @onready var header_label: Label = $Header/HeaderLabel
 @onready var target_label: Label = $Header/TargetLabel
+@onready var mask_label: Label = $Header/MaskLabel
 @onready var score_label: Label = $Footer/ScoreLabel
 @onready var combo_label: Label = $Footer/ComboLabel
+@onready var cooldown_label: Label = $Footer/CooldownLabel
 @onready var alert_bar: ProgressBar = $AlertBar
 
 var combo_tween: Tween = null
@@ -16,11 +18,24 @@ func _ready() -> void:
 	GameManager.alert_changed.connect(_on_alert_changed)
 	GameManager.combo_changed.connect(_on_combo_changed)
 	GameManager.combo_reward.connect(_on_combo_reward)
+	GameManager.mask_type_changed.connect(_on_mask_type_changed)
 	
 	_update_header()
 	_on_score_changed(0)
 	_on_alert_changed(100.0)
 	_on_combo_changed(0)
+	_on_mask_type_changed(24)
+
+
+func _process(_delta: float) -> void:
+	# 更新 /16 冷却显示
+	var cooldown = GameManager.get_mask_16_cooldown()
+	if cooldown_label:
+		if cooldown > 0:
+			cooldown_label.text = "/16 COOLDOWN: %.1fs" % cooldown
+			cooldown_label.visible = true
+		else:
+			cooldown_label.visible = false
 
 
 func _update_header() -> void:
@@ -28,6 +43,25 @@ func _update_header() -> void:
 		header_label.text = "V-FILTER v1.0"
 	if target_label:
 		target_label.text = "TARGET: %s" % GameManager.get_target_subnet_string()
+
+
+func _on_mask_type_changed(mask_type: int) -> void:
+	if mask_label:
+		var mask_formats = {
+			32: "255.255.255.255",
+			24: "255.255.255.0",
+			16: "255.255.0.0"
+		}
+		mask_label.text = "MASK: %s" % mask_formats.get(mask_type, "/%d" % mask_type)
+		
+		# 颜色区分
+		match mask_type:
+			32:
+				mask_label.add_theme_color_override("font_color", Color.CYAN)
+			24:
+				mask_label.add_theme_color_override("font_color", Color("#00ff41"))
+			16:
+				mask_label.add_theme_color_override("font_color", Color.RED)
 
 
 func _on_score_changed(new_score: int) -> void:
@@ -46,7 +80,6 @@ func _on_combo_changed(new_combo: int) -> void:
 
 
 func _on_combo_reward(reward_type: String) -> void:
-	# 连击奖励视觉反馈
 	if combo_label:
 		match reward_type:
 			"tier1":

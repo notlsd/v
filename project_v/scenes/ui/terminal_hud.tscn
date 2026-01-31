@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3 uid="uid://terminal_hud"]
+[gd_scene load_steps=5 format=3 uid="uid://terminal_hud"]
 
 [ext_resource type="Script" path="res://scripts/ui/terminal_hud.gd" id="1_hud"]
 
@@ -9,6 +9,10 @@ font_color = Color(0, 1, 0.255, 1)
 [sub_resource type="LabelSettings" id="LabelSettings_combo"]
 font_size = 48
 font_color = Color(1, 1, 1, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_cooldown"]
+font_size = 28
+font_color = Color(1, 0.3, 0.3, 1)
 
 [node name="TerminalHUD" type="CanvasLayer"]
 layer = 10
@@ -22,10 +26,20 @@ offset_bottom = 60.0
 layout_mode = 2
 offset_left = 20.0
 offset_top = 15.0
-offset_right = 400.0
+offset_right = 300.0
 offset_bottom = 45.0
 text = "V-FILTER v1.0"
 label_settings = SubResource("LabelSettings_1")
+
+[node name="MaskLabel" type="Label" parent="Header"]
+layout_mode = 2
+offset_left = 760.0
+offset_top = 15.0
+offset_right = 1160.0
+offset_bottom = 45.0
+text = "MASK: /24 FILTER"
+label_settings = SubResource("LabelSettings_1")
+horizontal_alignment = 1
 
 [node name="TargetLabel" type="Label" parent="Header"]
 layout_mode = 2
@@ -66,6 +80,15 @@ offset_right = 300.0
 offset_bottom = 35.0
 text = "SCORE: 0"
 label_settings = SubResource("LabelSettings_1")
+
+[node name="CooldownLabel" type="Label" parent="Footer"]
+visible = false
+layout_mode = 0
+offset_left = 320.0
+offset_right = 600.0
+offset_bottom = 35.0
+text = "/16 COOLDOWN: 5.0s"
+label_settings = SubResource("LabelSettings_cooldown")
 
 [node name="ComboLabel" type="Label" parent="Footer"]
 visible = false
