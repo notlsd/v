@@ -55,14 +55,9 @@ func _update_display() -> void:
 	
 	var ip_str = BitwiseManager.int_to_ip(ip_address)
 	
-	if is_target:
-		# 目标 IP - 红色，带标记
-		label.text = "> %s <" % ip_str
-		label.add_theme_color_override("font_color", Color("#ac2c25"))
-	else:
-		# 普通流量 - 绿色
-		label.text = "  %s" % ip_str
-		label.add_theme_color_override("font_color", Color("#00ff41"))
+	# 所有 IP 看起来一样 - 玩家需要自己判断
+	label.text = "  %s" % ip_str
+	label.add_theme_color_override("font_color", Color("#00ff41"))
 
 
 func _on_mouse_entered() -> void:

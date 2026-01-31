@@ -1,5 +1,5 @@
 ## GameManager
-## 游戏核心管理器 - 处理判定逻辑、分数、掩码、连击
+## 游戏核心管理器 - 处理判定逻辑、分数、掩码、连击、目标轮换
 extends Node
 
 ## 信号
@@ -11,10 +11,18 @@ signal match_failure()
 signal game_over(final_score: int)
 signal combo_changed(new_combo: int)
 signal combo_reward(reward_type: String)
+signal target_changed(new_target: String)
 
 ## 目标子网
 var target_subnet: int = 0
 var target_prefix: int = 24
+
+## 目标轮换系统
+var target_change_timer: float = 0.0
+var game_time: float = 0.0
+const BASE_TARGET_INTERVAL: float = 10.0
+const MIN_TARGET_INTERVAL: float = 5.0
+const INTERVAL_DECREASE_RATE: float = 0.05  # 每30秒减少5%
 
 ## 当前掩码类型 (32, 24, 16)
 var current_mask_type: int = 24
@@ -45,15 +53,15 @@ const COMBO_TIER_3: int = 20
 
 
 func _ready() -> void:
-	target_subnet = BitwiseManager.ip_to_int("192.168.1.0")
-	target_prefix = 24
-	print("[GameManager] Target subnet: %s/%d" % [BitwiseManager.int_to_ip(target_subnet), target_prefix])
+	_generate_random_target()
 	alert_changed.emit(alert_level)
 	combo_changed.emit(combo)
 	mask_type_changed.emit(current_mask_type)
 
 
 func _process(delta: float) -> void:
+	game_time += delta
+	
 	# 生命衰减
 	if alert_level > 0:
 		alert_level = max(0.0, alert_level - ALERT_DECAY_PER_SECOND * delta)
@@ -65,6 +73,37 @@ func _process(delta: float) -> void:
 	# /16 冷却倒计时
 	if mask_16_cooldown > 0:
 		mask_16_cooldown = max(0.0, mask_16_cooldown - delta)
+	
+	# 目标轮换计时
+	target_change_timer += delta
+	if target_change_timer >= _get_current_target_interval():
+		target_change_timer = 0.0
+		_generate_random_target()
+
+
+## 获取当前目标切换间隔（随时间减少）
+func _get_current_target_interval() -> float:
+	var multiplier = 1.0 - (game_time / 30.0) * INTERVAL_DECREASE_RATE
+	multiplier = max(MIN_TARGET_INTERVAL / BASE_TARGET_INTERVAL, multiplier)
+	return BASE_TARGET_INTERVAL * multiplier
+
+
+## 生成随机目标子网（高随机性）
+func _generate_random_target() -> void:
+	# 完全随机的 A/B/C 类地址
+	var a = randi() % 224 + 1  # 1-224 避免保留地址
+	var b = randi() % 256
+	var c = randi() % 256
+	target_subnet = BitwiseManager.ip_to_int("%d.%d.%d.0" % [a, b, c])
+	target_prefix = 24
+	var target_str = get_target_subnet_string()
+	print("[GameManager] New target: %s" % target_str)
+	target_changed.emit(target_str)
+
+
+## 获取目标切换剩余时间
+func get_time_until_target_change() -> float:
+	return max(0.0, _get_current_target_interval() - target_change_timer)
 
 
 func _input(event: InputEvent) -> void:
@@ -76,7 +115,6 @@ func _input(event: InputEvent) -> void:
 		set_mask_type(16)
 
 
-## 设置掩码类型
 func set_mask_type(mask_type: int) -> void:
 	if mask_type == 16 and mask_16_cooldown > 0:
 		print("[GameManager] /16 mask on cooldown: %.1fs" % mask_16_cooldown)
@@ -84,15 +122,12 @@ func set_mask_type(mask_type: int) -> void:
 	
 	current_mask_type = mask_type
 	mask_type_changed.emit(mask_type)
-	print("[GameManager] Mask changed to /%d" % mask_type)
 
 
-## 获取 /16 冷却剩余时间
 func get_mask_16_cooldown() -> float:
 	return mask_16_cooldown
 
 
-## 检查掩码是否可用
 func is_mask_available(mask_type: int) -> bool:
 	if mask_type == 16:
 		return mask_16_cooldown <= 0
@@ -104,11 +139,10 @@ func _on_data_block_clicked(ip: int) -> void:
 	var result := BitwiseManager.apply_mask(ip, mask)
 	var target_masked := BitwiseManager.apply_mask(target_subnet, mask)
 	
-	# 使用 /16 后进入冷却
-	if current_mask_type == 16:
-		mask_16_cooldown = MASK_16_COOLDOWN_TIME
-	
 	if result == target_masked:
+		# /16 冷却只在成功时触发
+		if current_mask_type == 16:
+			mask_16_cooldown = MASK_16_COOLDOWN_TIME
 		_on_match_success(ip)
 	else:
 		_on_match_failure(ip)
@@ -186,7 +220,10 @@ func reset() -> void:
 	mask_16_cooldown = 0.0
 	combo = 0
 	max_combo = 0
+	game_time = 0.0
+	target_change_timer = 0.0
 	set_process(true)
+	_generate_random_target()
 	score_changed.emit(score)
 	alert_changed.emit(alert_level)
 	combo_changed.emit(combo)

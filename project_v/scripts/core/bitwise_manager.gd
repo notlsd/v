@@ -62,15 +62,23 @@ func generate_random_ip_in_subnet(subnet: int, prefix: int) -> int:
 	return subnet | random_host
 
 
-## 生成不在指定子网内的随机 IP（用于干扰项）
-## 保持在 192.168.x.x 范围内
+## 生成不在指定子网内的随机 IP（高随机性）
 func generate_random_ip_outside_subnet(subnet: int, prefix: int) -> int:
-	var base_ip := ip_to_int("192.168.0.0")
 	var attempts := 0
+	var mask := prefix_to_mask(prefix)
+	
 	while attempts < 100:
-		var random_ip := base_ip | (randi() % 65536)  # 192.168.0.0 - 192.168.255.255
-		if apply_mask(random_ip, prefix_to_mask(prefix)) != subnet:
+		# 完全随机的 IP 地址
+		var a = randi() % 224 + 1  # 1-224
+		var b = randi() % 256
+		var c = randi() % 256
+		var d = randi() % 254 + 1  # 1-254
+		var random_ip := ip_to_int("%d.%d.%d.%d" % [a, b, c, d])
+		
+		if apply_mask(random_ip, mask) != subnet:
 			return random_ip
 		attempts += 1
-	# 如果尝试太多次，返回一个明显不同的子网
-	return ip_to_int("192.168.0.1")
+	
+	# 备用：返回一个明显不同的 IP
+	return ip_to_int("1.1.1.1")
+

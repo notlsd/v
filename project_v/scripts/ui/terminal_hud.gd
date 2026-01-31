@@ -1,16 +1,18 @@
 ## TerminalHUD
-## 终端风格 HUD - 显示分数、连击、掩码、进度条
+## 终端风格 HUD - 显示分数、连击、掩码、目标、进度条
 extends CanvasLayer
 
 @onready var header_label: Label = $Header/HeaderLabel
 @onready var target_label: Label = $Header/TargetLabel
 @onready var mask_label: Label = $Header/MaskLabel
+@onready var target_timer_label: Label = $Header/TargetTimerLabel
 @onready var score_label: Label = $Footer/ScoreLabel
 @onready var combo_label: Label = $Footer/ComboLabel
 @onready var cooldown_label: Label = $Footer/CooldownLabel
 @onready var alert_bar: ProgressBar = $AlertBar
 
 var combo_tween: Tween = null
+var target_tween: Tween = null
 
 
 func _ready() -> void:
@@ -19,6 +21,7 @@ func _ready() -> void:
 	GameManager.combo_changed.connect(_on_combo_changed)
 	GameManager.combo_reward.connect(_on_combo_reward)
 	GameManager.mask_type_changed.connect(_on_mask_type_changed)
+	GameManager.target_changed.connect(_on_target_changed)
 	
 	_update_header()
 	_on_score_changed(0)
@@ -36,6 +39,17 @@ func _process(_delta: float) -> void:
 			cooldown_label.visible = true
 		else:
 			cooldown_label.visible = false
+	
+	# 更新目标切换倒计时
+	if target_timer_label:
+		var time_left = GameManager.get_time_until_target_change()
+		target_timer_label.text = "NEXT: %.1fs" % time_left
+		
+		# 最后3秒高亮警告
+		if time_left <= 3.0:
+			target_timer_label.add_theme_color_override("font_color", Color.RED)
+		else:
+			target_timer_label.add_theme_color_override("font_color", Color.YELLOW)
 
 
 func _update_header() -> void:
@@ -43,6 +57,25 @@ func _update_header() -> void:
 		header_label.text = "V-FILTER v1.0"
 	if target_label:
 		target_label.text = "TARGET: %s" % GameManager.get_target_subnet_string()
+
+
+func _on_target_changed(new_target: String) -> void:
+	if target_label:
+		target_label.text = "TARGET: %s" % new_target
+		_pulse_target()
+
+
+func _pulse_target() -> void:
+	if target_label == null:
+		return
+	
+	if target_tween and target_tween.is_valid():
+		target_tween.kill()
+	
+	# 闪烁效果
+	target_label.modulate = Color.WHITE
+	target_tween = create_tween()
+	target_tween.tween_property(target_label, "modulate", Color("#00ff41"), 0.3)
 
 
 func _on_mask_type_changed(mask_type: int) -> void:
@@ -54,7 +87,6 @@ func _on_mask_type_changed(mask_type: int) -> void:
 		}
 		mask_label.text = "MASK: %s" % mask_formats.get(mask_type, "/%d" % mask_type)
 		
-		# 颜色区分
 		match mask_type:
 			32:
 				mask_label.add_theme_color_override("font_color", Color.CYAN)
