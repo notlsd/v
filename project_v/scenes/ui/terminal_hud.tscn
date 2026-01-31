@@ -84,12 +84,11 @@ text = "SCORE: 0"
 label_settings = SubResource("LabelSettings_1")
 
 [node name="CooldownLabel" type="Label" parent="Footer"]
-visible = false
 layout_mode = 0
 offset_left = 320.0
 offset_right = 600.0
 offset_bottom = 35.0
-text = "/16 COOLDOWN: 5.0s"
+text = "[E] /16 ✓ READY"
 label_settings = SubResource("LabelSettings_cooldown")
 
 [node name="ComboLabel" type="Label" parent="Footer"]

@@ -31,14 +31,16 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	# 更新 /16 冷却显示
+	# 更新 /16 状态显示（始终显示）
 	var cooldown = GameManager.get_mask_16_cooldown()
 	if cooldown_label:
 		if cooldown > 0:
-			cooldown_label.text = "/16 COOLDOWN: %.1fs" % cooldown
-			cooldown_label.visible = true
+			cooldown_label.text = "[E] /16 UNAVAILABLE"
+			cooldown_label.modulate = Color.RED
 		else:
-			cooldown_label.visible = false
+			cooldown_label.text = "[E] /16 READY"
+			cooldown_label.modulate = Color.GREEN
+		cooldown_label.visible = true
 	
 	# 更新目标切换倒计时
 	if target_timer_label:
