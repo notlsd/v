@@ -23,14 +23,14 @@ func _ready() -> void:
 	GameManager.alert_changed.connect(_on_alert_changed)
 	GameManager.combo_changed.connect(_on_combo_changed)
 	GameManager.combo_reward.connect(_on_combo_reward)
-	GameManager.mask_type_changed.connect(_on_mask_type_changed)
+	GameManager.mask_changed.connect(_on_mask_changed)
 	GameManager.target_changed.connect(_on_target_changed)
 	
 	_update_header()
 	_on_score_changed(0)
 	_on_alert_changed(100.0)
 	_on_combo_changed(0)
-	_on_mask_type_changed(24)
+	_on_mask_changed(GameManager.get_current_mask_decimal())
 	
 	# 创建背景目标层
 	_create_bg_target_display()
@@ -40,20 +40,15 @@ func _ready() -> void:
 	
 	# 连接 Perfect 信号
 	AudioManager.perfect_hit.connect(_on_perfect_hit)
+	
+	# 显示按键提示
+	if cooldown_label:
+		cooldown_label.text = "Q:/8  W:/16  E:/24  R:/32"
+		cooldown_label.modulate = Color(0.6, 0.6, 0.6)
+		cooldown_label.visible = true
 
 
 func _process(_delta: float) -> void:
-	# 更新 /16 状态显示（始终显示）
-	var cooldown = GameManager.get_mask_16_cooldown()
-	if cooldown_label:
-		if cooldown > 0:
-			cooldown_label.text = "[E] /16 UNAVAILABLE"
-			cooldown_label.modulate = Color.RED
-		else:
-			cooldown_label.text = "[E] /16 READY"
-			cooldown_label.modulate = Color.GREEN
-		cooldown_label.visible = true
-	
 	# 更新目标切换倒计时
 	if target_timer_label:
 		var time_left = GameManager.get_time_until_target_change()
@@ -68,7 +63,7 @@ func _process(_delta: float) -> void:
 
 func _update_header() -> void:
 	if header_label:
-		header_label.text = "V-FILTER v1.0"
+		header_label.text = "Great Fire Wall Simulator"
 	if target_label:
 		target_label.text = "TARGET: %s" % GameManager.get_target_subnet_string()
 		target_label.visible = false  # 隐藏右上角 target
@@ -109,21 +104,19 @@ func _pulse_bg_target() -> void:
 
 
 
-func _on_mask_type_changed(mask_type: int) -> void:
+func _on_mask_changed(mask_decimal: String) -> void:
 	if mask_label:
-		var mask_formats = {
-			32: "255.255.255.255",
-			24: "255.255.255.0",
-			16: "255.255.0.0"
-		}
-		mask_label.text = "MASK: %s" % mask_formats.get(mask_type, "/%d" % mask_type)
+		mask_label.text = "MASK: %s" % mask_decimal
 		
-		match mask_type:
-			32:
+		# 根据掩码类型设置颜色
+		match mask_decimal:
+			"255.255.255.255":
 				mask_label.add_theme_color_override("font_color", Color.CYAN)
-			24:
+			"255.255.255.0":
 				mask_label.add_theme_color_override("font_color", Color("#00ff41"))
-			16:
+			"255.255.0.0":
+				mask_label.add_theme_color_override("font_color", Color.YELLOW)
+			"255.0.0.0":
 				mask_label.add_theme_color_override("font_color", Color.RED)
 
 

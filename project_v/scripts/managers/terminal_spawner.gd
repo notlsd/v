@@ -55,18 +55,22 @@ func _ready() -> void:
 	spawn_timer.wait_time = current_spawn_interval
 	spawn_timer.timeout.connect(_spawn_lines)
 	add_child(spawn_timer)
-	spawn_timer.start()
+	# 定时器不自动启动，等游戏开始后启动
 	
-	# 开始播放 BGM
-	AudioManager.play_bgm(BGM_TRACKS.pick_random())
-	
-	print("[TerminalSpawner] Started with fixed interval: %.1fs" % current_spawn_interval)
-	
-	# 立即生成一行
-	_spawn_lines()
+	print("[TerminalSpawner] Ready, waiting for game to unpause...")
 
+
+var game_started: bool = false
 
 func _process(delta: float) -> void:
+	# 等待游戏取消暂停后启动
+	if not game_started and not get_tree().paused:
+		game_started = true
+		spawn_timer.start()
+		AudioManager.play_bgm(BGM_TRACKS.pick_random())
+		_spawn_lines()
+		print("[TerminalSpawner] Game started!")
+	
 	game_time += delta
 	_update_difficulty()
 

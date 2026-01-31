@@ -15,7 +15,7 @@ var glitch_tween: Tween = null
 func _ready() -> void:
 	# 连接 GameManager 信号
 	GameManager.match_failure.connect(_on_match_failure)
-	GameManager.mask_type_changed.connect(_on_mask_changed)
+	GameManager.mask_changed.connect(_on_mask_changed)
 
 
 ## 设置 Glitch 材质引用
@@ -50,5 +50,5 @@ func _on_match_failure() -> void:
 
 
 ## 切换掩码时触发轻微 glitch
-func _on_mask_changed(_new_prefix: int) -> void:
+func _on_mask_changed(_mask_decimal: String) -> void:
 	trigger_glitch(0.3, 0.05)

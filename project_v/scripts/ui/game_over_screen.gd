@@ -41,7 +41,7 @@ func show_game_over(final_score: int) -> void:
 
 func _on_restart_pressed() -> void:
 	get_tree().paused = false
-	GameManager.reset()
+	GameManager.reset_game()
 	
 	# 重置 TerminalSpawner
 	if terminal_spawner and terminal_spawner.has_method("reset"):

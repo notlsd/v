@@ -16,6 +16,8 @@ shader_parameter/time_scale = 5.0
 [sub_resource type="GDScript" id="GDScript_main"]
 script/source = "extends Node
 
+const TutorialScreen = preload(\"res://scripts/ui/tutorial_screen.gd\")
+
 @onready var glitch_overlay = $GlitchLayer/GlitchOverlay
 @onready var game_over_screen = $GameOverScreen
 @onready var terminal_spawner = $TerminalLayer/TerminalSpawner
@@ -35,7 +37,15 @@ func _ready() -> void:
 	if game_over_screen and terminal_spawner:
 		game_over_screen.set_spawner(terminal_spawner)
 	
+	# 显示教程
+	_show_tutorial()
+	
 	print(\"[Main] Terminal mode started! Target: %s\" % GameManager.get_target_subnet_string())
+
+
+func _show_tutorial() -> void:
+	var tutorial = TutorialScreen.new()
+	add_child(tutorial)
 
 
 func _on_game_over(final_score: int) -> void:
