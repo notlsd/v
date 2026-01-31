@@ -56,8 +56,14 @@ func check_match(ip: int, mask: int, target_subnet: int) -> bool:
 ## 生成指定子网内的随机 IP
 ## 例: generate_random_ip_in_subnet(3232235776, 24) 会生成 192.168.1.x
 func generate_random_ip_in_subnet(subnet: int, prefix: int) -> int:
+	# /32 时直接返回子网地址本身
+	if prefix >= 32:
+		return subnet
+	
 	var host_bits := 32 - prefix
 	var max_host := (1 << host_bits) - 1
+	if max_host <= 0:
+		return subnet
 	var random_host := randi() % max_host + 1  # 避免 0（网络地址）
 	return subnet | random_host
 
@@ -81,4 +87,3 @@ func generate_random_ip_outside_subnet(subnet: int, prefix: int) -> int:
 	
 	# 备用：返回一个明显不同的 IP
 	return ip_to_int("1.1.1.1")
-

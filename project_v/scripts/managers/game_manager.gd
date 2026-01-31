@@ -51,6 +51,17 @@ const COMBO_TIER_1: int = 5
 const COMBO_TIER_2: int = 10
 const COMBO_TIER_3: int = 20
 
+## 前缀权重表 (匹配范围宽的少，窄的多)
+const PREFIX_WEIGHTS = {
+	0: 1,    # 5% - 全部
+	8: 2,    # 10% - A类
+	24: 10,  # 50% - C类
+	32: 7    # 35% - 单个
+}
+
+## 当前屏幕上的有效IP数量
+var valid_ip_count: int = 0
+
 
 func _ready() -> void:
 	_generate_random_target()
@@ -88,17 +99,62 @@ func _get_current_target_interval() -> float:
 	return BASE_TARGET_INTERVAL * multiplier
 
 
-## 生成随机目标子网（高随机性）
+## 生成随机目标子网（随机前缀）
 func _generate_random_target() -> void:
-	# 完全随机的 A/B/C 类地址
-	var a = randi() % 224 + 1  # 1-224 避免保留地址
+	# 随机选择前缀（加权）
+	target_prefix = _weighted_random_prefix()
+	
+	# 根据前缀生成子网
+	var a = randi() % 224 + 1
 	var b = randi() % 256
 	var c = randi() % 256
-	target_subnet = BitwiseManager.ip_to_int("%d.%d.%d.0" % [a, b, c])
-	target_prefix = 24
+	var d = randi() % 256
+	
+	match target_prefix:
+		0:
+			target_subnet = 0  # 匹配所有
+		8:
+			target_subnet = BitwiseManager.ip_to_int("%d.0.0.0" % a)
+		24:
+			target_subnet = BitwiseManager.ip_to_int("%d.%d.%d.0" % [a, b, c])
+		32:
+			target_subnet = BitwiseManager.ip_to_int("%d.%d.%d.%d" % [a, b, c, d])
+	
+	valid_ip_count = 0  # 重置有效IP计数
 	var target_str = get_target_subnet_string()
 	print("[GameManager] New target: %s" % target_str)
 	target_changed.emit(target_str)
+
+
+## 加权随机选择前缀
+func _weighted_random_prefix() -> int:
+	var total_weight = 0
+	for w in PREFIX_WEIGHTS.values():
+		total_weight += w
+	
+	var roll = randi() % total_weight
+	var cumulative = 0
+	for prefix in PREFIX_WEIGHTS:
+		cumulative += PREFIX_WEIGHTS[prefix]
+		if roll < cumulative:
+			return prefix
+	return 24  # 默认
+
+
+## 有效IP增加（生成时调用）
+func add_valid_ip() -> void:
+	valid_ip_count += 1
+
+
+## 有效IP减少（消除/逃脱时调用）
+func remove_valid_ip() -> void:
+	valid_ip_count -= 1
+	if valid_ip_count <= 0:
+		valid_ip_count = 0
+		# 所有有效IP被消除，自动切换目标
+		target_change_timer = 0.0
+		_generate_random_target()
+		print("[GameManager] All valid IPs cleared! Target switched.")
 
 
 ## 获取目标切换剩余时间
@@ -132,6 +188,14 @@ func is_mask_available(mask_type: int) -> bool:
 	if mask_type == 16:
 		return mask_16_cooldown <= 0
 	return true
+
+
+## 检查 IP 是否匹配当前目标（不触发任何效果）
+func check_ip_match(ip: int) -> bool:
+	var mask := BitwiseManager.prefix_to_mask(current_mask_type)
+	var result := BitwiseManager.apply_mask(ip, mask)
+	var target_masked := BitwiseManager.apply_mask(target_subnet, mask)
+	return result == target_masked
 
 
 func _on_data_block_clicked(ip: int) -> void:
@@ -222,6 +286,7 @@ func reset() -> void:
 	max_combo = 0
 	game_time = 0.0
 	target_change_timer = 0.0
+	valid_ip_count = 0
 	set_process(true)
 	_generate_random_target()
 	score_changed.emit(score)

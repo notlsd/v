@@ -21,7 +21,7 @@ func _ready() -> void:
 	# 连接 GameManager 信号
 	GameManager.score_changed.connect(_on_score_changed)
 	GameManager.alert_changed.connect(_on_alert_changed)
-	GameManager.mask_changed.connect(_on_mask_changed)
+	GameManager.mask_type_changed.connect(_on_mask_changed)
 	GameManager.match_success.connect(_on_match_success)
 	GameManager.match_failure.connect(_on_match_failure)
 	
