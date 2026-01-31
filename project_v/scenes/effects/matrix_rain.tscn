@@ -5,7 +5,7 @@ script/source = "extends CanvasLayer
 ## Matrix Rain - 矩阵雨背景效果
 ## 使用多个 Label 模拟下落的 0/1 字符
 
-const COLUMN_COUNT := 40
+const COLUMN_COUNT := 120
 const CHAR_SIZE := 20
 const FALL_SPEED_MIN := 100.0
 const FALL_SPEED_MAX := 300.0

@@ -54,15 +54,14 @@ func _update_display() -> void:
 		return
 	
 	var ip_str = BitwiseManager.int_to_ip(ip_address)
-	var timestamp = Time.get_time_string_from_system()
 	
 	if is_target:
 		# 目标 IP - 红色，带标记
-		label.text = "[%s] > INCOMING: %s  <<<" % [timestamp, ip_str]
+		label.text = "> %s <" % ip_str
 		label.add_theme_color_override("font_color", Color("#ac2c25"))
 	else:
 		# 普通流量 - 绿色
-		label.text = "[%s]   TRAFFIC: %s" % [timestamp, ip_str]
+		label.text = "  %s" % ip_str
 		label.add_theme_color_override("font_color", Color("#00ff41"))
 
 
@@ -82,7 +81,7 @@ func _on_gui_input(event: InputEvent) -> void:
 			if not is_clicked:
 				is_clicked = true
 				clicked.emit(ip_address)
-				_show_clicked_state()
+				queue_free()  # 立即销毁
 
 
 func _show_clicked_state() -> void:
