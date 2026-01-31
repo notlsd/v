@@ -13,6 +13,9 @@ extends CanvasLayer
 
 var combo_tween: Tween = null
 var target_tween: Tween = null
+var perfect_label: Label = null
+var bg_target_layer: CanvasLayer = null
+var bg_target_label: Label = null
 
 
 func _ready() -> void:
@@ -28,6 +31,15 @@ func _ready() -> void:
 	_on_alert_changed(100.0)
 	_on_combo_changed(0)
 	_on_mask_type_changed(24)
+	
+	# 创建背景目标层
+	_create_bg_target_display()
+	
+	# Perfect 标签
+	_create_perfect_label()
+	
+	# 连接 Perfect 信号
+	AudioManager.perfect_hit.connect(_on_perfect_hit)
 
 
 func _process(_delta: float) -> void:
@@ -59,12 +71,18 @@ func _update_header() -> void:
 		header_label.text = "V-FILTER v1.0"
 	if target_label:
 		target_label.text = "TARGET: %s" % GameManager.get_target_subnet_string()
+		target_label.visible = false  # 隐藏右上角 target
 
 
 func _on_target_changed(new_target: String) -> void:
 	if target_label:
 		target_label.text = "TARGET: %s" % new_target
 		_pulse_target()
+	
+	# 更新背景目标
+	if bg_target_label:
+		bg_target_label.text = new_target
+		_pulse_bg_target()
 
 
 func _pulse_target() -> void:
@@ -78,6 +96,17 @@ func _pulse_target() -> void:
 	target_label.modulate = Color.WHITE
 	target_tween = create_tween()
 	target_tween.tween_property(target_label, "modulate", Color("#00ff41"), 0.3)
+
+
+func _pulse_bg_target() -> void:
+	if bg_target_label == null:
+		return
+	
+	# 闪烁效果（使用固定值避免累积问题）
+	bg_target_label.modulate = Color(1, 1, 1, 1.5)  # 闪亮
+	var tween = create_tween()
+	tween.tween_property(bg_target_label, "modulate", Color(1, 1, 1, 1.0), 0.5)
+
 
 
 func _on_mask_type_changed(mask_type: int) -> void:
@@ -159,3 +188,77 @@ func _on_alert_changed(new_value: float) -> void:
 			alert_bar.modulate = Color.YELLOW
 		else:
 			alert_bar.modulate = Color("#00ff41")
+
+
+## 创建 Perfect 标签
+func _create_perfect_label() -> void:
+	perfect_label = Label.new()
+	perfect_label.text = "PERFECT!"
+	perfect_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	perfect_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	perfect_label.visible = false
+	
+	# 样式
+	var settings = LabelSettings.new()
+	settings.font_size = 72
+	settings.font_color = Color.CYAN
+	settings.outline_size = 4
+	settings.outline_color = Color.BLACK
+	perfect_label.label_settings = settings
+	
+	# 位置（屏幕中央偏上）
+	perfect_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	perfect_label.position = Vector2(960, 200)
+	perfect_label.pivot_offset = Vector2(100, 36)
+	
+	add_child(perfect_label)
+
+
+## Perfect 命中
+func _on_perfect_hit() -> void:
+	if perfect_label == null:
+		return
+	
+	perfect_label.visible = true
+	perfect_label.modulate = Color.CYAN
+	perfect_label.scale = Vector2(1.5, 1.5)
+	
+	var tween = create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(perfect_label, "scale", Vector2(1.0, 1.0), 0.2)
+	tween.tween_property(perfect_label, "modulate:a", 0.0, 0.5).set_delay(0.2)
+	tween.chain().tween_callback(func(): perfect_label.visible = false)
+
+
+## 创建背景目标显示
+func _create_bg_target_display() -> void:
+	# 创建底层 CanvasLayer（在矩阵雨之上，终端行之下）
+	bg_target_layer = CanvasLayer.new()
+	bg_target_layer.layer = 1
+	add_child(bg_target_layer)
+	
+	# 创建容器
+	var container = Control.new()
+	container.set_anchors_preset(Control.PRESET_FULL_RECT)
+	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bg_target_layer.add_child(container)
+	
+	# 创建巨大的目标标签
+	bg_target_label = Label.new()
+	bg_target_label.text = GameManager.get_target_subnet_string()
+	bg_target_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	bg_target_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	bg_target_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	
+	# 样式：超大字体，半透明
+	var settings = LabelSettings.new()
+	settings.font_size = 200  # 巨大字体
+	settings.font_color = Color(0, 1, 0.3, 0.25)  # 半透明绿色（更亮）
+	bg_target_label.label_settings = settings
+	
+	# 全屏
+	bg_target_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	
+	container.add_child(bg_target_label)
+	print("[HUD] Background target display created: %s" % bg_target_label.text)
+

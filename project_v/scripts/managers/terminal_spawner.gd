@@ -1,13 +1,19 @@
 ## TerminalSpawner
-## 终端行生成器 - 多列布局，带难度曲线
+## 终端行生成器 - 多列布局，固定间隔，带难度曲线
 extends Control
 
 const TerminalLineScene = preload("res://scenes/entities/terminal_line.tscn")
 
 ## 基础配置
-@export var base_spawn_interval: float = 1.5
+@export var base_spawn_interval: float = 1.2  # 固定生成间隔
 @export var base_scroll_speed: float = 50.0
 @export var target_ratio: float = 0.4
+
+## 音乐路径
+const BGM_TRACKS = [
+	"res://bgm_track_01.mp3",
+	"res://bgm_track_02.mp3"
+]
 
 ## 生成位置 Y
 const SPAWN_Y: float = 1000.0
@@ -21,7 +27,7 @@ const LINE_WIDTH: float = 450.0
 ## 难度曲线配置
 const DIFFICULTY_INCREASE_INTERVAL: float = 30.0  # 每30秒增加难度
 const SPEED_INCREASE_RATE: float = 0.1  # 每次速度增加10%
-const INTERVAL_DECREASE_RATE: float = 0.1  # 每次间隔减少10%
+const INTERVAL_DECREASE_RATE: float = 0.1  # 间隔减少率
 const MIN_SPAWN_INTERVAL: float = 0.6  # 最小生成间隔
 
 ## 运行时变量
@@ -29,7 +35,7 @@ var spawn_timer: Timer = null
 var column_positions: Array[float] = []
 var game_time: float = 0.0
 var current_scroll_speed: float = 50.0
-var current_spawn_interval: float = 1.5
+var current_spawn_interval: float = 1.2
 
 
 func _ready() -> void:
@@ -44,14 +50,17 @@ func _ready() -> void:
 		var x_pos = i * COLUMN_WIDTH + (COLUMN_WIDTH - LINE_WIDTH) / 2
 		column_positions.append(x_pos)
 	
-	# 创建定时器
+	# 创建定时器（固定间隔生成）
 	spawn_timer = Timer.new()
 	spawn_timer.wait_time = current_spawn_interval
 	spawn_timer.timeout.connect(_spawn_lines)
 	add_child(spawn_timer)
 	spawn_timer.start()
 	
-	print("[TerminalSpawner] Started with difficulty curve enabled")
+	# 开始播放 BGM
+	AudioManager.play_bgm(BGM_TRACKS.pick_random())
+	
+	print("[TerminalSpawner] Started with fixed interval: %.1fs" % current_spawn_interval)
 	
 	# 立即生成一行
 	_spawn_lines()
@@ -70,7 +79,7 @@ func _update_difficulty() -> void:
 	# 更新速度
 	current_scroll_speed = base_scroll_speed * difficulty_multiplier
 	
-	# 更新生成间隔（反向，难度越高间隔越短）
+	# 更新生成间隔（难度越高间隔越短）
 	var new_interval = base_spawn_interval / difficulty_multiplier
 	current_spawn_interval = max(MIN_SPAWN_INTERVAL, new_interval)
 	
@@ -147,3 +156,6 @@ func reset() -> void:
 	
 	if spawn_timer:
 		spawn_timer.wait_time = current_spawn_interval
+	
+	# 重新播放 BGM
+	AudioManager.play_bgm(BGM_TRACKS.pick_random())

@@ -42,9 +42,9 @@ var combo: int = 0
 var max_combo: int = 0
 
 ## 常量
-const ALERT_DECREASE_ON_FAIL: float = 10.0
-const ALERT_INCREASE_ON_SUCCESS: float = 2.0
-const ALERT_DECAY_PER_SECOND: float = 2.0
+const ALERT_DECREASE_ON_FAIL: float = 5.0  # 失败扣血
+const ALERT_INCREASE_ON_SUCCESS: float = 5.0  # 成功回血
+const ALERT_DECAY_PER_SECOND: float = 2.0  # 自动衰减
 
 ## Combo 奖励阈值
 const COMBO_TIER_1: int = 5
