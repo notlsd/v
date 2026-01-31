@@ -1,10 +1,14 @@
-[gd_scene load_steps=3 format=3 uid="uid://game_over"]
+[gd_scene load_steps=4 format=3 uid="uid://game_over"]
 
 [ext_resource type="Script" path="res://scripts/ui/game_over_screen.gd" id="1_script"]
 
-[sub_resource type="LabelSettings" id="LabelSettings_1"]
+[sub_resource type="LabelSettings" id="LabelSettings_title"]
 font_size = 64
 font_color = Color(1, 0, 0, 1)
+
+[sub_resource type="LabelSettings" id="LabelSettings_stats"]
+font_size = 32
+font_color = Color(0, 1, 0.255, 1)
 
 [node name="GameOverScreen" type="CanvasLayer"]
 layer = 100
@@ -17,7 +21,7 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.8)
+color = Color(0, 0, 0, 0.85)
 
 [node name="Panel" type="PanelContainer" parent="."]
 anchors_preset = 8
@@ -25,30 +29,48 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -200.0
-offset_top = -150.0
-offset_right = 200.0
-offset_bottom = 150.0
+offset_left = -250.0
+offset_top = -200.0
+offset_right = 250.0
+offset_bottom = 200.0
 grow_horizontal = 2
 grow_vertical = 2
 
 [node name="VBox" type="VBoxContainer" parent="Panel"]
 layout_mode = 2
+theme_override_constants/separation = 15
 alignment = 1
 
 [node name="TitleLabel" type="Label" parent="Panel/VBox"]
 layout_mode = 2
 text = "GAME OVER"
-label_settings = SubResource("LabelSettings_1")
+label_settings = SubResource("LabelSettings_title")
 horizontal_alignment = 1
+
+[node name="Spacer1" type="Control" parent="Panel/VBox"]
+custom_minimum_size = Vector2(0, 20)
+layout_mode = 2
 
 [node name="ScoreLabel" type="Label" parent="Panel/VBox"]
 layout_mode = 2
-text = "FINAL SCORE: 0"
+text = "SCORE: 0"
+label_settings = SubResource("LabelSettings_stats")
 horizontal_alignment = 1
 
-[node name="Spacer" type="Control" parent="Panel/VBox"]
-custom_minimum_size = Vector2(0, 30)
+[node name="TimeLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = "TIME: 00:00"
+label_settings = SubResource("LabelSettings_stats")
+horizontal_alignment = 1
+
+[node name="ComboLabel" type="Label" parent="Panel/VBox"]
+layout_mode = 2
+text = "MAX COMBO: x0"
+label_settings = SubResource("LabelSettings_stats")
+horizontal_alignment = 1
+
+[node name="Spacer2" type="Control" parent="Panel/VBox"]
+custom_minimum_size = Vector2(0, 20)
 layout_mode = 2
 
 [node name="RestartButton" type="Button" parent="Panel/VBox"]

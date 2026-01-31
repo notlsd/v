@@ -132,3 +132,18 @@ func get_game_time() -> float:
 
 func get_difficulty_level() -> int:
 	return int(floor(game_time / DIFFICULTY_INCREASE_INTERVAL))
+
+
+func reset() -> void:
+	# 清除所有现有的行
+	for child in get_children():
+		if child != spawn_timer:
+			child.queue_free()
+	
+	# 重置时间和速度
+	game_time = 0.0
+	current_scroll_speed = base_scroll_speed
+	current_spawn_interval = base_spawn_interval
+	
+	if spawn_timer:
+		spawn_timer.wait_time = current_spawn_interval
