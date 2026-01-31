@@ -1,76 +1,41 @@
-[gd_scene load_steps=9 format=3 uid="uid://main_scene"]
+[gd_scene load_steps=8 format=3 uid="uid://main_scene"]
 
-[ext_resource type="PackedScene" uid="uid://player_cursor" path="res://scenes/entities/player_cursor.tscn" id="1_cursor"]
-[ext_resource type="PackedScene" uid="uid://hud_scene" path="res://scenes/ui/hud.tscn" id="2_hud"]
-[ext_resource type="Script" path="res://scripts/managers/spawn_manager.gd" id="3_spawn"]
-[ext_resource type="PackedScene" uid="uid://matrix_rain" path="res://scenes/effects/matrix_rain.tscn" id="4_rain"]
-[ext_resource type="PackedScene" uid="uid://crt_overlay" path="res://scenes/ui/crt_overlay.tscn" id="5_crt"]
-[ext_resource type="Shader" path="res://shaders/glitch_effect.gdshader" id="6_glitch"]
+[ext_resource type="PackedScene" uid="uid://matrix_rain" path="res://scenes/effects/matrix_rain.tscn" id="1_rain"]
+[ext_resource type="PackedScene" uid="uid://terminal_hud" path="res://scenes/ui/terminal_hud.tscn" id="2_hud"]
+[ext_resource type="Script" path="res://scripts/managers/terminal_spawner.gd" id="3_spawn"]
+[ext_resource type="PackedScene" uid="uid://crt_overlay" path="res://scenes/ui/crt_overlay.tscn" id="4_crt"]
+[ext_resource type="Shader" path="res://shaders/glitch_effect.gdshader" id="5_glitch"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_glitch"]
-shader = ExtResource("6_glitch")
+shader = ExtResource("5_glitch")
 shader_parameter/intensity = 0.0
 shader_parameter/time_scale = 5.0
 
 [sub_resource type="GDScript" id="GDScript_main"]
 script/source = "extends Node2D
 
-@onready var player_cursor = $PlayerCursor
 @onready var glitch_overlay = $GlitchOverlay
 
 func _ready() -> void:
-	# 设置背景色为黑色
 	RenderingServer.set_default_clear_color(Color.BLACK)
 	
-	# 连接 PlayerCursor 到 GameManager
-	if player_cursor:
-		GameManager.connect_player_cursor(player_cursor)
-		print(\"[Main] PlayerCursor connected to GameManager\")
-	
-	# 设置 Glitch 材质到 EffectManager
 	if glitch_overlay:
 		var glitch_mat = glitch_overlay.material as ShaderMaterial
 		if glitch_mat:
 			EffectManager.set_glitch_material(glitch_mat)
-			print(\"[Main] Glitch material connected to EffectManager\")
 	
-	print(\"[Main] Game started! Target: %s\" % GameManager.get_target_subnet_string())
-
-
-func _input(event: InputEvent) -> void:
-	if event is InputEventMouseButton:
-		if event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-			_handle_click(get_global_mouse_position())
-
-
-func _handle_click(mouse_pos: Vector2) -> void:
-	var space_state = get_world_2d().direct_space_state
-	var query = PhysicsPointQueryParameters2D.new()
-	query.position = mouse_pos
-	query.collide_with_areas = true
-	query.collide_with_bodies = false
-	query.collision_mask = 0xFFFFFFFF
-	
-	var results = space_state.intersect_point(query, 32)
-	
-	for result in results:
-		var collider = result.get(\"collider\")
-		if collider and collider.has_method(\"on_clicked\"):
-			collider.on_clicked()
-			return
+	print(\"[Main] Terminal mode started! Target: %s\" % GameManager.get_target_subnet_string())
 "
 
 [node name="Main" type="Node2D"]
 script = SubResource("GDScript_main")
 
-[node name="MatrixRain" parent="." instance=ExtResource("4_rain")]
+[node name="MatrixRain" parent="." instance=ExtResource("1_rain")]
 
-[node name="PlayerCursor" parent="." instance=ExtResource("1_cursor")]
-
-[node name="SpawnManager" type="Node" parent="."]
+[node name="TerminalSpawner" type="Node" parent="."]
 script = ExtResource("3_spawn")
 
-[node name="HUD" parent="." instance=ExtResource("2_hud")]
+[node name="TerminalHUD" parent="." instance=ExtResource("2_hud")]
 
 [node name="GlitchOverlay" type="ColorRect" parent="."]
 z_index = 99
@@ -82,4 +47,4 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="CRTOverlay" parent="." instance=ExtResource("5_crt")]
+[node name="CRTOverlay" parent="." instance=ExtResource("4_crt")]

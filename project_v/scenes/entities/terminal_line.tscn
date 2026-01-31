@@ -1,0 +1,31 @@
+[gd_scene load_steps=3 format=3 uid="uid://terminal_line"]
+
+[ext_resource type="Script" path="res://scripts/entities/terminal_line.gd" id="1_line"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_1"]
+font_size = 16
+font_color = Color(0, 1, 0.255, 1)
+
+[node name="TerminalLine" type="Control"]
+custom_minimum_size = Vector2(1920, 24)
+layout_mode = 3
+anchors_preset = 0
+offset_right = 1920.0
+offset_bottom = 24.0
+mouse_filter = 0
+script = ExtResource("1_line")
+
+[node name="Highlight" type="ColorRect" parent="."]
+visible = false
+layout_mode = 0
+offset_right = 1920.0
+offset_bottom = 24.0
+color = Color(1, 1, 1, 0.1)
+
+[node name="Label" type="Label" parent="."]
+layout_mode = 0
+offset_left = 20.0
+offset_right = 1900.0
+offset_bottom = 24.0
+label_settings = SubResource("LabelSettings_1")
+vertical_alignment = 1
