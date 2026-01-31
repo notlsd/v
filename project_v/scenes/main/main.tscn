@@ -29,9 +29,9 @@ func _ready() -> void:
 	
 	# 设置 Glitch 材质到 EffectManager
 	if glitch_overlay:
-		var material = glitch_overlay.material as ShaderMaterial
-		if material:
-			EffectManager.set_glitch_material(material)
+		var glitch_mat = glitch_overlay.material as ShaderMaterial
+		if glitch_mat:
+			EffectManager.set_glitch_material(glitch_mat)
 			print(\"[Main] Glitch material connected to EffectManager\")
 	
 	print(\"[Main] Game started! Target: %s\" % GameManager.get_target_subnet_string())

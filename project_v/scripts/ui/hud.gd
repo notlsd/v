@@ -3,7 +3,6 @@
 extends CanvasLayer
 
 const MAX_LOG_LINES := 5
-const LOG_TYPE_INTERVAL := 0.03  # 打字机效果间隔
 
 @onready var target_label: Label = $TargetPanel/VBox/TargetLabel
 @onready var mask_label: Label = $MaskPanel/VBox/MaskLabel
@@ -12,7 +11,6 @@ const LOG_TYPE_INTERVAL := 0.03  # 打字机效果间隔
 @onready var combo_label: Label = $ComboLabel
 @onready var log_container: VBoxContainer = $LogPanel/LogContainer
 
-var log_lines: Array[String] = []
 var pending_logs: Array[String] = []
 var current_typing_log: String = ""
 var current_typing_index: int = 0
@@ -34,8 +32,7 @@ func _ready() -> void:
 	_on_alert_changed(0.0)
 
 
-func _process(delta: float) -> void:
-	# 打字机效果处理
+func _process(_delta: float) -> void:
 	_process_typing()
 
 
@@ -57,7 +54,6 @@ func _on_score_changed(new_score: int) -> void:
 func _on_alert_changed(new_value: float) -> void:
 	if alert_bar:
 		alert_bar.value = new_value
-		# 警报高时变红
 		if new_value > 70:
 			alert_bar.modulate = Color.RED
 		elif new_value > 40:
@@ -71,58 +67,33 @@ func _on_mask_changed(new_prefix: int) -> void:
 
 
 func _on_match_success() -> void:
-	_add_log("[OK] Packet filtered successfully")
+	_add_log("[OK] Packet filtered")
 
 
 func _on_match_failure() -> void:
-	_add_log("[ERR] Anomaly detected - Trace +10%")
+	_add_log("[ERR] Trace +10%")
 
 
 func _add_log(message: String) -> void:
-	pending_logs.append(message)
-	if not is_typing:
-		_start_next_log()
-
-
-func _start_next_log() -> void:
-	if pending_logs.is_empty():
-		is_typing = false
+	if log_container == null:
 		return
 	
-	current_typing_log = pending_logs.pop_front()
-	current_typing_index = 0
-	is_typing = true
+	# 直接添加完整的日志行（移除打字机效果避免卡顿）
+	var new_label = Label.new()
+	new_label.add_theme_font_size_override("font_size", 12)
+	new_label.add_theme_color_override("font_color", Color("#00ff41"))
+	new_label.text = message
+	log_container.add_child(new_label)
 	
-	# 如果日志容器存在，添加新行
-	if log_container:
-		var new_label = Label.new()
-		new_label.add_theme_font_size_override("font_size", 12)
-		new_label.add_theme_color_override("font_color", Color("#00ff41"))
-		new_label.text = ""
-		log_container.add_child(new_label)
-		
-		# 限制日志行数
-		while log_container.get_child_count() > MAX_LOG_LINES:
-			log_container.get_child(0).queue_free()
+	# 限制日志行数 - 使用计数器避免无限循环
+	var remove_count = log_container.get_child_count() - MAX_LOG_LINES
+	for i in range(remove_count):
+		if log_container.get_child_count() > 0:
+			var child = log_container.get_child(0)
+			log_container.remove_child(child)
+			child.queue_free()
 
 
 func _process_typing() -> void:
-	if not is_typing or log_container == null:
-		return
-	
-	if log_container.get_child_count() == 0:
-		return
-	
-	var current_label = log_container.get_children()[-1] as Label
-	if current_label == null:
-		return
-	
-	# 每帧添加多个字符以加快速度
-	for i in range(3):
-		if current_typing_index < current_typing_log.length():
-			current_typing_index += 1
-			current_label.text = current_typing_log.substr(0, current_typing_index)
-		else:
-			is_typing = false
-			_start_next_log()
-			break
+	# 打字机效果已移除以提高稳定性
+	pass

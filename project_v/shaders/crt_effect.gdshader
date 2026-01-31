@@ -1,6 +1,10 @@
 shader_type canvas_item;
 
 // CRT 效果 Shader - 赛博朋克复古显示器风格
+// 使用屏幕纹理进行后处理
+
+// 屏幕纹理
+uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_nearest;
 
 // 控制参数
 uniform float scanline_opacity : hint_range(0.0, 1.0) = 0.3;
@@ -18,19 +22,16 @@ vec2 barrel_distort(vec2 uv) {
 }
 
 void fragment() {
-    vec2 uv = barrel_distort(UV);
+    vec2 uv = barrel_distort(SCREEN_UV);
     
-    // 边界检查
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
-        COLOR = vec4(0.0, 0.0, 0.0, 1.0);
-        return;
-    }
+    // 边界检查 - 使用 clamp
+    uv = clamp(uv, vec2(0.0), vec2(1.0));
     
     // 色差偏移
     float ca_offset = chromatic_aberration / 1000.0;
-    float r = texture(TEXTURE, uv + vec2(ca_offset, 0.0)).r;
-    float g = texture(TEXTURE, uv).g;
-    float b = texture(TEXTURE, uv - vec2(ca_offset, 0.0)).b;
+    float r = texture(screen_texture, uv + vec2(ca_offset, 0.0)).r;
+    float g = texture(screen_texture, uv).g;
+    float b = texture(screen_texture, uv - vec2(ca_offset, 0.0)).b;
     vec3 color = vec3(r, g, b);
     
     // 扫描线

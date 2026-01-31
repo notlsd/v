@@ -1,14 +1,17 @@
 shader_type canvas_item;
 
 // Glitch 效果 Shader - 数字故障风格
+// 使用屏幕纹理
+
+uniform sampler2D screen_texture : hint_screen_texture, repeat_disable, filter_nearest;
 
 // 控制参数
 uniform float intensity : hint_range(0.0, 1.0) = 0.0;
 uniform float time_scale : hint_range(0.1, 10.0) = 5.0;
 
 void fragment() {
-    vec2 uv = UV;
-    vec3 color = texture(TEXTURE, uv).rgb;
+    vec2 uv = SCREEN_UV;
+    vec3 color = texture(screen_texture, uv).rgb;
     
     if (intensity > 0.01) {
         // 时间随机种子
@@ -23,9 +26,9 @@ void fragment() {
         
         // 颜色通道错位
         float channel_offset = intensity * 0.02;
-        float r = texture(TEXTURE, uv + vec2(channel_offset, 0.0)).r;
-        float g = texture(TEXTURE, uv).g;
-        float b = texture(TEXTURE, uv - vec2(channel_offset, 0.0)).b;
+        float r = texture(screen_texture, uv + vec2(channel_offset, 0.0)).r;
+        float g = texture(screen_texture, uv).g;
+        float b = texture(screen_texture, uv - vec2(channel_offset, 0.0)).b;
         color = vec3(r, g, b);
         
         // 噪点干扰
