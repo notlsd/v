@@ -5,7 +5,7 @@ extends CanvasLayer
 @onready var header_label: Label = $Header/HeaderLabel
 @onready var target_label: Label = $Header/TargetLabel
 @onready var score_label: Label = $Footer/ScoreLabel
-@onready var alert_bar: ProgressBar = $Footer/AlertBar
+@onready var alert_bar: ProgressBar = $AlertBar
 
 
 func _ready() -> void:
@@ -32,9 +32,10 @@ func _on_score_changed(new_score: int) -> void:
 func _on_alert_changed(new_value: float) -> void:
 	if alert_bar:
 		alert_bar.value = new_value
-		if new_value > 70:
+		# 高时绿色(安全)，低时红色(危险)
+		if new_value < 30:
 			alert_bar.modulate = Color.RED
-		elif new_value > 40:
+		elif new_value < 60:
 			alert_bar.modulate = Color.YELLOW
 		else:
 			alert_bar.modulate = Color("#00ff41")

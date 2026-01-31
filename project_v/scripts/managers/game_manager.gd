@@ -5,7 +5,7 @@ extends Node
 ## 信号：分数改变
 signal score_changed(new_score: int)
 
-## 信号：警报值改变
+## 信号：警报值改变（现在是剩余时间/生命）
 signal alert_changed(new_value: float)
 
 ## 信号：掩码改变（转发自 PlayerCursor）
@@ -16,6 +16,9 @@ signal match_success()
 
 ## 信号：匹配失败
 signal match_failure()
+
+## 信号：游戏结束
+signal game_over(final_score: int)
 
 ## 目标子网（整数形式，如 192.168.1.0 = 3232235776）
 var target_subnet: int = 0
@@ -29,17 +32,20 @@ var current_prefix: int = 24
 ## 分数
 var score: int = 0
 
-## 警报追踪度 (0-100)
-var alert_level: float = 0.0
+## 剩余生命/时间 (100-0，归零游戏结束)
+var alert_level: float = 100.0
 
-## 每次失误增加的警报值
-const ALERT_INCREASE: float = 10.0
+## 每次失误减少的生命值
+const ALERT_DECREASE_ON_FAIL: float = 10.0
 
-## 每次成功减少的警报值
-const ALERT_DECREASE: float = 2.0
+## 每次成功恢复的生命值
+const ALERT_INCREASE_ON_SUCCESS: float = 2.0
 
 ## PlayerCursor 引用（在 main 场景中设置）
 var player_cursor: Node = null
+
+## 每秒自动减少的生命值
+const ALERT_DECAY_PER_SECOND: float = 2.0
 
 
 func _ready() -> void:
@@ -47,6 +53,19 @@ func _ready() -> void:
 	target_subnet = BitwiseManager.ip_to_int("192.168.1.0")
 	target_prefix = 24
 	print("[GameManager] Target subnet: %s/%d" % [BitwiseManager.int_to_ip(target_subnet), target_prefix])
+	
+	# 发送初始状态
+	alert_changed.emit(alert_level)
+
+
+func _process(delta: float) -> void:
+	# 持续减少生命值，形成时间压力
+	if alert_level > 0:
+		alert_level = max(0.0, alert_level - ALERT_DECAY_PER_SECOND * delta)
+		alert_changed.emit(alert_level)
+		
+		if alert_level <= 0.0:
+			_game_over()
 
 
 ## 连接 PlayerCursor 的信号
@@ -84,45 +103,48 @@ func _on_match_success(_ip: int) -> void:
 	score += 100
 	score_changed.emit(score)
 	
-	# 成功时降低警报
-	alert_level = max(0.0, alert_level - ALERT_DECREASE)
+	# 成功时恢复生命
+	alert_level = min(100.0, alert_level + ALERT_INCREASE_ON_SUCCESS)
 	alert_changed.emit(alert_level)
 	
 	match_success.emit()
-	
-	# 销毁被点击的数据块（通过信号发送者处理）
-	# DataBlock 自己会在收到点击后被销毁
 
 
 ## 匹配失败处理
 func _on_match_failure(_ip: int) -> void:
-	# 失误增加警报
-	alert_level = min(100.0, alert_level + ALERT_INCREASE)
+	# 失误减少生命
+	alert_level = max(0.0, alert_level - ALERT_DECREASE_ON_FAIL)
 	alert_changed.emit(alert_level)
 	
 	match_failure.emit()
 	
-	if alert_level >= 100.0:
+	if alert_level <= 0.0:
 		_game_over()
 
 
 ## DataBlock 逃脱时的回调
 func _on_data_block_escaped() -> void:
-	# 数据块逃脱也增加警报（较少）
-	alert_level = min(100.0, alert_level + ALERT_INCREASE * 0.5)
+	# 目标逃脱减少生命
+	alert_level = max(0.0, alert_level - ALERT_DECREASE_ON_FAIL * 0.5)
 	alert_changed.emit(alert_level)
+	
+	if alert_level <= 0.0:
+		_game_over()
 
 
 ## 游戏结束
 func _game_over() -> void:
+	if alert_level > 0:  # 防止重复触发
+		return
 	print("[GameManager] GAME OVER! Final score: %d" % score)
-	# TODO: 显示游戏结束界面
+	set_process(false)  # 停止自动衰减
+	game_over.emit(score)
 
 
 ## 重置游戏状态
 func reset() -> void:
 	score = 0
-	alert_level = 0.0
+	alert_level = 100.0  # 从满格开始
 	current_prefix = 24
 	score_changed.emit(score)
 	alert_changed.emit(alert_level)

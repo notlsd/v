@@ -1,10 +1,11 @@
-[gd_scene load_steps=8 format=3 uid="uid://main_scene"]
+[gd_scene load_steps=9 format=3 uid="uid://main_scene"]
 
 [ext_resource type="PackedScene" uid="uid://matrix_rain" path="res://scenes/effects/matrix_rain.tscn" id="1_rain"]
 [ext_resource type="PackedScene" uid="uid://terminal_hud" path="res://scenes/ui/terminal_hud.tscn" id="2_hud"]
 [ext_resource type="Script" path="res://scripts/managers/terminal_spawner.gd" id="3_spawn"]
 [ext_resource type="PackedScene" uid="uid://crt_overlay" path="res://scenes/ui/crt_overlay.tscn" id="4_crt"]
 [ext_resource type="Shader" path="res://shaders/glitch_effect.gdshader" id="5_glitch"]
+[ext_resource type="PackedScene" uid="uid://game_over" path="res://scenes/ui/game_over_screen.tscn" id="6_gameover"]
 
 [sub_resource type="ShaderMaterial" id="ShaderMaterial_glitch"]
 shader = ExtResource("5_glitch")
@@ -15,6 +16,7 @@ shader_parameter/time_scale = 5.0
 script/source = "extends Node
 
 @onready var glitch_overlay = $GlitchLayer/GlitchOverlay
+@onready var game_over_screen = $GameOverScreen
 
 func _ready() -> void:
 	RenderingServer.set_default_clear_color(Color.BLACK)
@@ -24,7 +26,15 @@ func _ready() -> void:
 		if glitch_mat:
 			EffectManager.set_glitch_material(glitch_mat)
 	
+	# 连接 GameManager 的 game_over 信号
+	GameManager.game_over.connect(_on_game_over)
+	
 	print(\"[Main] Terminal mode started! Target: %s\" % GameManager.get_target_subnet_string())
+
+
+func _on_game_over(final_score: int) -> void:
+	if game_over_screen:
+		game_over_screen.show_game_over(final_score)
 "
 
 [node name="Main" type="Node"]
@@ -60,3 +70,5 @@ mouse_filter = 2
 material = SubResource("ShaderMaterial_glitch")
 
 [node name="CRTOverlay" parent="." instance=ExtResource("4_crt")]
+
+[node name="GameOverScreen" parent="." instance=ExtResource("6_gameover")]
