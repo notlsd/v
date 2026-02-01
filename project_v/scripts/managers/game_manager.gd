@@ -8,6 +8,7 @@ signal alert_changed(new_value: float)
 signal mask_changed(mask_decimal: String)
 signal match_success()
 signal match_failure()
+signal wrong_mask_hint(correct_prefix: int)  # 提示玩家应该使用的正确 mask
 signal game_over(final_score: int)
 signal combo_changed(new_combo: int)
 signal combo_reward(reward_type: String)
@@ -32,7 +33,8 @@ const MASK_CONFIGS = {
 	24: "255.255.255.0",
 	32: "255.255.255.255"
 }
-var current_mask_prefix: int = 24  # 当前选择的掩码前缀
+var current_mask_prefix: int = 24  # 当前选择的掀码前缀
+var mask_selected: bool = false  # 玩家是否已按键选择 mask
 
 ## 分数
 var score: int = 0
@@ -172,6 +174,7 @@ func _input(event: InputEvent) -> void:
 func set_mask(prefix: int) -> void:
 	if prefix in MASK_CONFIGS:
 		current_mask_prefix = prefix
+		mask_selected = true  # 标记已选择 mask
 		mask_changed.emit(MASK_CONFIGS[prefix])
 
 
@@ -181,9 +184,13 @@ func get_current_mask_decimal() -> String:
 
 ## 检查 IP 是否匹配当前目标
 func check_ip_match(ip: int) -> bool:
+	# 必须先按键选择 mask
+	if not mask_selected:
+		return false
+	
 	var mask := BitwiseManager.prefix_to_mask(current_mask_prefix)
 	var result := BitwiseManager.apply_mask(ip, mask)
-	return result == target_subnet
+	return result == target_subnet and current_mask_prefix == target_prefix
 
 
 func _on_data_block_clicked(ip: int) -> void:
@@ -192,10 +199,26 @@ func _on_data_block_clicked(ip: int) -> void:
 	if is_match:
 		_on_match_success(ip)
 	else:
+		# 检查是否是 IP 正确但 mask 错误的情况
+		_check_wrong_mask_hint(ip)
 		_on_match_failure(ip)
 
 
+## 检查玩家是否点击了正确 IP 但使用了错误 mask
+func _check_wrong_mask_hint(ip: int) -> void:
+	# 检查这个 IP 使用目标 prefix 是否匹配
+	var correct_mask := BitwiseManager.prefix_to_mask(target_prefix)
+	var result := BitwiseManager.apply_mask(ip, correct_mask)
+	
+	if result == target_subnet:
+		# IP 本来是正确的，但玩家用错了 mask
+		wrong_mask_hint.emit(target_prefix)
+
+
 func _on_match_success(_ip: int) -> void:
+	# 重置 mask 选择状态，要求玩家重新按键
+	mask_selected = false
+	
 	combo += 1
 	if combo > max_combo:
 		max_combo = combo

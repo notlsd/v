@@ -122,4 +122,56 @@ func _show_wrong_click() -> void:
 		highlight.visible = false
 	# 允许再次点击（如果玩家改变掩码后重新尝试）
 	is_clicked = false
+	
+	# 检查是否是 mask 错误（IP 本来是正确的）
+	_check_and_show_mask_hint()
 
+
+## 检查并显示 mask 提示
+func _check_and_show_mask_hint() -> void:
+	# 检查这个 IP 使用目标 prefix 是否匹配
+	var correct_mask := BitwiseManager.prefix_to_mask(GameManager.target_prefix)
+	var result := BitwiseManager.apply_mask(ip_address, correct_mask)
+	
+	if result == GameManager.target_subnet:
+		# IP 本来是正确的，但玩家用错了 mask - 显示提示
+		_show_mask_hint(GameManager.target_prefix)
+
+
+## 在 IP 旁边显示 mask 提示
+func _show_mask_hint(correct_prefix: int) -> void:
+	# 根据 prefix 确定对应的键位
+	var key_hint = ""
+	match correct_prefix:
+		8:
+			key_hint = "Q:/8"
+		16:
+			key_hint = "W:/16"
+		24:
+			key_hint = "E:/24"
+		32:
+			key_hint = "R:/32"
+	
+	# 创建提示标签（与 IP 字体大小一致）
+	var hint_label = Label.new()
+	hint_label.text = "  " + key_hint
+	hint_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	
+	# 与 IP 相同的字体大小，半透明红色
+	var settings = LabelSettings.new()
+	settings.font_size = 32
+	settings.font_color = Color(1, 0.3, 0.3, 0.6)  # 半透明红色
+	hint_label.label_settings = settings
+	
+	# 位置：在 IP 右侧紧挨着
+	hint_label.position = Vector2(280, 0)
+	hint_label.size = Vector2(100, 40)
+	
+	add_child(hint_label)
+	
+	# 动画：淡入淡出
+	hint_label.modulate.a = 0.0
+	var tween = create_tween()
+	tween.tween_property(hint_label, "modulate:a", 1.0, 0.1)
+	tween.tween_property(hint_label, "modulate:a", 0.0, 0.4).set_delay(0.6)
+	tween.tween_callback(func(): hint_label.queue_free())

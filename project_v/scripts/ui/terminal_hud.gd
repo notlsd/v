@@ -41,11 +41,9 @@ func _ready() -> void:
 	# 连接 Perfect 信号
 	AudioManager.perfect_hit.connect(_on_perfect_hit)
 	
-	# 显示按键提示
+	# 隐藏左下角提示（不再固定显示）
 	if cooldown_label:
-		cooldown_label.text = "Q:/8  W:/16  E:/24  R:/32"
-		cooldown_label.modulate = Color(0.6, 0.6, 0.6)
-		cooldown_label.visible = true
+		cooldown_label.visible = false
 
 
 func _process(_delta: float) -> void:
