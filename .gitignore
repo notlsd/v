@@ -22,3 +22,8 @@ Thumbs.db
 *.swp
 *.swo
 *~
+
+# Large audio files (use Git LFS or external hosting)
+*.mp3
+*.ogg
+*.wav

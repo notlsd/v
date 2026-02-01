@@ -93,7 +93,16 @@ func _update_difficulty() -> void:
 
 
 func _spawn_lines() -> void:
-	var num_ips = randi_range(1, 3)
+	# 根据音乐强度动态调整生成数量
+	var intensity = AudioManager.get_current_intensity()
+	var num_ips: int
+	
+	if intensity > 0.7:
+		num_ips = 3  # 激烈时生成 3 个
+	elif intensity > 0.4:
+		num_ips = 2  # 中等时生成 2 个
+	else:
+		num_ips = 1  # 舒缓时生成 1 个
 	
 	var available_columns = range(NUM_COLUMNS)
 	available_columns.shuffle()

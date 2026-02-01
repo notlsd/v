@@ -186,41 +186,64 @@ func _on_alert_changed(new_value: float) -> void:
 ## 创建 Perfect 标签
 func _create_perfect_label() -> void:
 	perfect_label = Label.new()
-	perfect_label.text = "PERFECT!"
+	perfect_label.text = "PERFECT"
 	perfect_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	perfect_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	perfect_label.visible = false
 	
-	# 样式
+	# 终端风格样式
 	var settings = LabelSettings.new()
-	settings.font_size = 72
-	settings.font_color = Color.CYAN
-	settings.outline_size = 4
-	settings.outline_color = Color.BLACK
+	settings.font_size = 48
+	settings.font_color = Color("#00ff41")  # 终端绿
+	settings.shadow_size = 8
+	settings.shadow_color = Color(0, 1, 0.3, 0.5)
 	perfect_label.label_settings = settings
 	
-	# 位置（屏幕中央偏上）
-	perfect_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
-	perfect_label.position = Vector2(960, 200)
-	perfect_label.pivot_offset = Vector2(100, 36)
+	# 全屏填充，文字自动居中
+	perfect_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+	perfect_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	
 	add_child(perfect_label)
 
 
-## Perfect 命中
+## Perfect 命中 - 酷炫动画
 func _on_perfect_hit() -> void:
 	if perfect_label == null:
 		return
 	
+	# 设置初始状态
 	perfect_label.visible = true
-	perfect_label.modulate = Color.CYAN
-	perfect_label.scale = Vector2(1.5, 1.5)
+	perfect_label.modulate = Color("#00ff41")
+	perfect_label.modulate.a = 1.0
 	
+	# 弹跳 + 淡出动画
 	var tween = create_tween()
 	tween.set_parallel(true)
-	tween.tween_property(perfect_label, "scale", Vector2(1.0, 1.0), 0.2)
-	tween.tween_property(perfect_label, "modulate:a", 0.0, 0.5).set_delay(0.2)
+	
+	# 颜色闪烁：绿 -> 青 -> 白 -> 绿
+	tween.tween_property(perfect_label, "modulate", Color.CYAN, 0.1)
+	tween.chain().tween_property(perfect_label, "modulate", Color.WHITE, 0.1)
+	tween.chain().tween_property(perfect_label, "modulate", Color("#00ff41"), 0.1)
+	# 淡出
+	tween.chain().tween_property(perfect_label, "modulate:a", 0.0, 0.3).set_delay(0.1)
 	tween.chain().tween_callback(func(): perfect_label.visible = false)
+	
+	# 屏幕边缘闪光效果
+	_flash_screen_edge()
+
+## 屏幕边缘闪光效果
+func _flash_screen_edge() -> void:
+	# 创建一个短暂的边缘发光效果
+	var flash = ColorRect.new()
+	flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	flash.color = Color(0, 1, 0.3, 0.3)  # 半透明绿色
+	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(flash)
+	
+	# 快速淡出
+	var tween = create_tween()
+	tween.tween_property(flash, "color:a", 0.0, 0.15)
+	tween.tween_callback(func(): flash.queue_free())
 
 
 ## 创建背景目标显示

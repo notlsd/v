@@ -5,6 +5,7 @@ extends Node
 ## 信号
 signal beat_hit()
 signal perfect_hit()
+signal intensity_changed(intensity: float)  # 音乐强度变化 (0.0 - 1.0)
 
 ## 音频播放器
 var bgm_player: AudioStreamPlayer = null
@@ -21,12 +22,13 @@ const BASS_FREQ_MAX = 250.0
 var last_energy: float = 0.0
 var energy_history: Array[float] = []
 const ENERGY_HISTORY_SIZE = 43  # 约1秒的历史（假设60fps）
-const BEAT_THRESHOLD = 1.5  # 能量峰值阈值
+const BEAT_THRESHOLD = 1.3  # 能量峰值阈值（降低以提高检测灵敏度）
 const BEAT_COOLDOWN = 0.2  # 两次节拍之间的最小间隔
 var beat_cooldown_timer: float = 0.0
 var beats_detected: Array[float] = []  # 记录最近节拍时间
 var estimated_bpm: float = 120.0
 var bgm_playing: bool = false
+var current_intensity: float = 0.0  # 当前音乐强度 (0.0 - 1.0)
 
 ## BPM 手动设置（备用）
 var bpm: float = 120.0
@@ -133,6 +135,12 @@ func _detect_beat_from_spectrum() -> void:
 		avg_energy += e
 	avg_energy /= max(1, energy_history.size())
 	
+	# 计算归一化强度 (0.0 - 1.0) - 用于节奏同步生成
+	var new_intensity = clamp(energy / max(0.001, avg_energy * 2.0), 0.0, 1.0)
+	if abs(new_intensity - current_intensity) > 0.05:  # 只在变化明显时更新
+		current_intensity = new_intensity
+		intensity_changed.emit(current_intensity)
+	
 	# 检测能量峰值
 	if energy > avg_energy * BEAT_THRESHOLD and beat_cooldown_timer <= 0:
 		beat_cooldown_timer = BEAT_COOLDOWN
@@ -198,20 +206,77 @@ func stop_bgm() -> void:
 
 ## 检查是否在 Perfect 窗口内
 func is_in_beat_window(window_ms: float = 50.0) -> bool:
-	# 使用最近的节拍时间
-	if beats_detected.is_empty():
-		return false
-	
-	var current_time = Time.get_ticks_msec() / 1000.0
-	var last_beat = beats_detected.back()
-	var time_since_beat = current_time - last_beat
-	
-	# 估算下一个节拍时间
-	var beat_interval = 60.0 / max(60.0, estimated_bpm)
-	var time_to_next_beat = beat_interval - fmod(time_since_beat, beat_interval)
-	
 	var window_sec = window_ms / 1000.0
-	return time_since_beat < window_sec or time_to_next_beat < window_sec
+	
+	# DEBUG: 输出当前状态
+	print("[Perfect Debug] ====== 检查 Perfect 窗口 ======")
+	print("[Perfect Debug] bgm_playing=%s, bgm_player=%s, bgm_player.playing=%s" % [
+		bgm_playing,
+		bgm_player != null,
+		bgm_player.playing if bgm_player else "N/A"
+	])
+	print("[Perfect Debug] window_ms=%s, window_sec=%s" % [window_ms, window_sec])
+	print("[Perfect Debug] estimated_bpm=%s, default_bpm=%s" % [estimated_bpm, bpm])
+	print("[Perfect Debug] beats_detected.size()=%s" % beats_detected.size())
+	
+	# 优先使用 BGM 播放时间进行节拍判定（最可靠）
+	if bgm_playing and bgm_player and bgm_player.playing:
+		var playback_position = bgm_player.get_playback_position()
+		# 使用估算的 BPM，如果没有则使用默认值
+		var current_bpm = estimated_bpm if estimated_bpm > 60.0 else bpm
+		var beat_interval = 60.0 / current_bpm
+		var time_in_beat = fmod(playback_position, beat_interval)
+		var time_to_next = beat_interval - time_in_beat
+		
+		print("[Perfect Debug] [BGM方式] playback_pos=%.3f, bpm=%.1f, beat_interval=%.3f" % [
+			playback_position, current_bpm, beat_interval
+		])
+		print("[Perfect Debug] [BGM方式] time_in_beat=%.3f, time_to_next=%.3f" % [
+			time_in_beat, time_to_next
+		])
+		print("[Perfect Debug] [BGM方式] 判定: time_in_beat(%.3f) < window(%.3f) = %s" % [
+			time_in_beat, window_sec, time_in_beat < window_sec
+		])
+		print("[Perfect Debug] [BGM方式] 判定: time_to_next(%.3f) < window(%.3f) = %s" % [
+			time_to_next, window_sec, time_to_next < window_sec
+		])
+		
+		# 检查是否接近节拍点（周期开始或即将结束）
+		if time_in_beat < window_sec or time_to_next < window_sec:
+			print("[Perfect Debug] >>> 结果: PERFECT! <<<")
+			return true
+		else:
+			print("[Perfect Debug] [BGM方式] 不在窗口内")
+	else:
+		print("[Perfect Debug] BGM 未播放，跳过 BGM 方式")
+	
+	# 备用方案：使用节拍检测历史
+	if not beats_detected.is_empty():
+		var current_time = Time.get_ticks_msec() / 1000.0
+		var last_beat = beats_detected.back()
+		var time_since_beat = current_time - last_beat
+		
+		print("[Perfect Debug] [备用方式] current_time=%.3f, last_beat=%.3f, time_since=%.3f" % [
+			current_time, last_beat, time_since_beat
+		])
+		
+		if time_since_beat < window_sec:
+			print("[Perfect Debug] >>> 结果: PERFECT (备用-刚过节拍)! <<<")
+			return true
+		
+		var beat_interval = 60.0 / max(60.0, estimated_bpm)
+		var time_to_next = beat_interval - fmod(time_since_beat, beat_interval)
+		print("[Perfect Debug] [备用方式] beat_interval=%.3f, time_to_next=%.3f" % [
+			beat_interval, time_to_next
+		])
+		if time_to_next < window_sec:
+			print("[Perfect Debug] >>> 结果: PERFECT (备用-接近下个节拍)! <<<")
+			return true
+	else:
+		print("[Perfect Debug] beats_detected 为空，跳过备用方式")
+	
+	print("[Perfect Debug] >>> 结果: NOT PERFECT <<<")
+	return false
 
 
 func _process_tone_generation() -> void:
@@ -305,12 +370,18 @@ func play_perfect_sfx() -> void:
 
 ## 信号回调
 func _on_match_success() -> void:
-	# 检查是否 Perfect
-	if is_in_beat_window(50.0):
+	print("\n[AudioManager] ========== _on_match_success 被调用 ==========")
+	# 检查是否 Perfect（窗口增大到 100ms 提高触发率）
+	var is_perfect = is_in_beat_window(100.0)
+	print("[AudioManager] is_perfect = %s" % is_perfect)
+	if is_perfect:
+		print("[AudioManager] >>> 触发 PERFECT! 播放音效并发射信号 <<<")
 		play_perfect_sfx()
 		perfect_hit.emit()
 	else:
+		print("[AudioManager] 普通成功，播放普通音效")
 		play_success_sfx()
+	print("[AudioManager] ==========================================\n")
 
 
 func _on_match_failure() -> void:
@@ -340,3 +411,8 @@ func set_bpm(new_bpm: float) -> void:
 
 func get_estimated_bpm() -> float:
 	return estimated_bpm
+
+
+## 获取当前音乐强度 (0.0 - 1.0)
+func get_current_intensity() -> float:
+	return current_intensity
