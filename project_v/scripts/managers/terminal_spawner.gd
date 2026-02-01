@@ -7,7 +7,6 @@ const TerminalLineScene = preload("res://scenes/entities/terminal_line.tscn")
 ## 基础配置
 @export var base_spawn_interval: float = 1.2  # 固定生成间隔
 @export var base_scroll_speed: float = 50.0
-@export var target_ratio: float = 0.4
 
 ## 音乐路径
 const BGM_TRACKS = [
@@ -36,6 +35,9 @@ var column_positions: Array[float] = []
 var game_time: float = 0.0
 var current_scroll_speed: float = 50.0
 var current_spawn_interval: float = 1.2
+
+## IP 去重系统
+var active_ips: Dictionary = {}  # IP (int) -> line reference
 
 
 func _ready() -> void:
@@ -92,17 +94,32 @@ func _update_difficulty() -> void:
 		spawn_timer.wait_time = current_spawn_interval
 
 
+## 根据 target prefix 调整生成比例
+## /8: 约 16M 个可能 IP → 生成更多 target
+## /32: 1 个精确 IP → 生成更少
+func _get_target_ratio_for_prefix(prefix: int) -> float:
+	match prefix:
+		8: return 0.6   # 更多 target
+		16: return 0.5
+		24: return 0.4
+		32: return 0.3  # 更少但确保有
+	return 0.4
+
+
+## 基于音乐强度和游戏时间计算生成数量
+func _calculate_spawn_count(intensity: float) -> int:
+	var base_count = 1
+	# 音乐强度加成 (0-2)
+	var intensity_bonus = int(intensity * 2)
+	# 时间加成：每分钟 +1，最多 +2
+	var time_bonus = mini(2, int(game_time / 60.0))
+	return clampi(base_count + intensity_bonus + time_bonus, 1, 4)
+
+
 func _spawn_lines() -> void:
-	# 根据音乐强度动态调整生成数量
+	# 根据音乐强度和游戏时间动态调整生成数量
 	var intensity = AudioManager.get_current_intensity()
-	var num_ips: int
-	
-	if intensity > 0.7:
-		num_ips = 3  # 激烈时生成 3 个
-	elif intensity > 0.4:
-		num_ips = 2  # 中等时生成 2 个
-	else:
-		num_ips = 1  # 舒缓时生成 1 个
+	var num_ips = _calculate_spawn_count(intensity)
 	
 	var available_columns = range(NUM_COLUMNS)
 	available_columns.shuffle()
@@ -116,19 +133,16 @@ func _spawn_lines() -> void:
 func _spawn_single_line(column_index: int) -> void:
 	var line = TerminalLineScene.instantiate()
 	
+	# 根据 prefix 调整 target 比例
+	var target_ratio = _get_target_ratio_for_prefix(GameManager.target_prefix)
 	var is_target = randf() < target_ratio
-	var ip: int
 	
-	if is_target:
-		ip = BitwiseManager.generate_random_ip_in_subnet(
-			GameManager.target_subnet,
-			GameManager.target_prefix
-		)
-	else:
-		ip = BitwiseManager.generate_random_ip_outside_subnet(
-			GameManager.target_subnet,
-			GameManager.target_prefix
-		)
+	# 生成不重复的 IP
+	var ip = _generate_unique_ip(is_target)
+	if ip == -1:
+		# 无法生成唯一 IP，跳过
+		line.queue_free()
+		return
 	
 	add_child(line)
 	
@@ -136,8 +150,43 @@ func _spawn_single_line(column_index: int) -> void:
 	line.position = Vector2(x_pos, SPAWN_Y)
 	line.setup(ip, is_target, current_scroll_speed)
 	
+	# 追踪活跃 IP
+	active_ips[ip] = line
+	
+	# 连接信号
 	line.clicked.connect(_on_line_clicked)
 	line.escaped.connect(_on_line_escaped)
+	line.tree_exiting.connect(_on_line_removed.bind(ip))
+
+
+## 生成唯一的 IP（不与当前活跃 IP 重复）
+func _generate_unique_ip(is_target: bool) -> int:
+	var max_attempts = 20
+	
+	for _attempt in range(max_attempts):
+		var ip: int
+		if is_target:
+			ip = BitwiseManager.generate_random_ip_in_subnet(
+				GameManager.target_subnet,
+				GameManager.target_prefix
+			)
+		else:
+			ip = BitwiseManager.generate_random_ip_outside_subnet(
+				GameManager.target_subnet,
+				GameManager.target_prefix
+			)
+		
+		# 检查是否重复
+		if ip not in active_ips:
+			return ip
+	
+	# 尝试多次仍有重复，返回 -1 表示失败
+	return -1
+
+
+## 当 line 被移除时，从活跃 IP 列表中删除
+func _on_line_removed(ip: int) -> void:
+	active_ips.erase(ip)
 
 
 func _on_line_clicked(ip: int) -> void:
@@ -162,6 +211,9 @@ func reset() -> void:
 		if child != spawn_timer:
 			child.queue_free()
 	
+	# 清空活跃 IP
+	active_ips.clear()
+	
 	# 重置时间和速度
 	game_time = 0.0
 	current_scroll_speed = base_scroll_speed
@@ -172,3 +224,4 @@ func reset() -> void:
 	
 	# 重新播放 BGM
 	AudioManager.play_bgm(BGM_TRACKS.pick_random())
+

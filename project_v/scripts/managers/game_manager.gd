@@ -178,14 +178,32 @@ func set_mask(prefix: int) -> void:
 		mask_changed.emit(MASK_CONFIGS[prefix])
 
 
+## 检查当前是否有 mask 按键被按住
+func _is_mask_key_held() -> bool:
+	if Input.is_action_pressed("mask_8"):
+		current_mask_prefix = 8
+		return true
+	elif Input.is_action_pressed("mask_16"):
+		current_mask_prefix = 16
+		return true
+	elif Input.is_action_pressed("mask_24"):
+		current_mask_prefix = 24
+		return true
+	elif Input.is_action_pressed("mask_32"):
+		current_mask_prefix = 32
+		return true
+	return false
+
+
 func get_current_mask_decimal() -> String:
 	return MASK_CONFIGS.get(current_mask_prefix, "255.255.255.0")
 
 
 ## 检查 IP 是否匹配当前目标
 func check_ip_match(ip: int) -> bool:
-	# 必须先按键选择 mask
-	if not mask_selected:
+	# 检查是否有 mask 按键被按住，或者之前已选择过 mask
+	var has_mask = _is_mask_key_held() or mask_selected
+	if not has_mask:
 		return false
 	
 	var mask := BitwiseManager.prefix_to_mask(current_mask_prefix)
