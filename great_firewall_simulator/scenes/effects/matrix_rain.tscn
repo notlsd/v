@@ -1,0 +1,70 @@
+[gd_scene load_steps=3 format=3 uid="uid://matrix_rain"]
+
+[sub_resource type="GDScript" id="GDScript_rain"]
+script/source = "extends CanvasLayer
+## Matrix Rain - 矩阵雨背景效果
+## 使用多个 Label 模拟下落的 0/1 字符
+
+const COLUMN_COUNT := 120
+const CHAR_SIZE := 20
+const FALL_SPEED_MIN := 100.0
+const FALL_SPEED_MAX := 300.0
+
+var columns: Array[Dictionary] = []
+
+func _ready() -> void:
+	layer = -1  # 在背景层
+	_init_columns()
+
+
+func _process(delta: float) -> void:
+	for col in columns:
+		# 更新位置
+		col.y += col.speed * delta
+		col.label.position.y = col.y
+		
+		# 随机更新字符
+		if randf() < 0.05:
+			col.label.text = str(randi() % 2)
+		
+		# 循环回到顶部
+		if col.y > 1100:
+			col.y = -50 - randf() * 200
+			col.speed = randf_range(FALL_SPEED_MIN, FALL_SPEED_MAX)
+			col.label.modulate.a = randf_range(0.2, 0.6)
+
+
+func _init_columns() -> void:
+	var container = Control.new()
+	container.set_anchors_preset(Control.PRESET_FULL_RECT)
+	container.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(container)
+	
+	for i in range(COLUMN_COUNT):
+		var label = Label.new()
+		label.text = str(randi() % 2)
+		label.add_theme_font_size_override(\"font_size\", CHAR_SIZE)
+		label.add_theme_color_override(\"font_color\", Color(\"#00ff41\"))
+		label.modulate.a = randf_range(0.2, 0.6)
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		
+		var x_pos = (float(i) / COLUMN_COUNT) * 1920.0 + randf() * 20
+		var y_pos = randf() * 1100 - 100
+		label.position = Vector2(x_pos, y_pos)
+		
+		container.add_child(label)
+		
+		columns.append({
+			\"label\": label,
+			\"y\": y_pos,
+			\"speed\": randf_range(FALL_SPEED_MIN, FALL_SPEED_MAX)
+		})
+"
+
+[sub_resource type="LabelSettings" id="LabelSettings_1"]
+font_size = 20
+font_color = Color(0, 1, 0.255, 1)
+
+[node name="MatrixRain" type="CanvasLayer"]
+layer = -1
+script = SubResource("GDScript_rain")

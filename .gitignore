@@ -10,6 +10,7 @@
 
 # Compiled assets
 export/
+exports/
 *.exe
 *.x86_64
 *.pck
